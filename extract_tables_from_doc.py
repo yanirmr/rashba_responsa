@@ -4,7 +4,6 @@ import sys
 import glob
 import win32com.client
 from docx import Document
-import tqdm
 
 
 def doc_to_docx(doc_file, docx_file):
