@@ -4,6 +4,7 @@ import os
 import re
 
 import pandas as pd
+import semantic_version
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -81,6 +82,10 @@ def merge_filtered_dfs(filtered_dfs: list, key_col: str):
 
 
 if __name__ == "__main__":
+    # Define the version number
+    version_number = "0.1.0"
+    version = semantic_version.Version(version_number)
+
     # Set input folder
     input_folder = "csv_formatted"
     key_pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+$'
@@ -108,6 +113,8 @@ if __name__ == "__main__":
     # Add number of clean keys to the output dictionary
     output_stats['num_clean_keys'] = len(super_set)
     output_stats['num_of_files'] = len(dfs)
+    output_stats['version'] = str(version)
+
     # Add statistics for each DataFrame to the output dictionary
     df_stats = {}
     for df_name, df in dfs.items():
@@ -124,7 +131,7 @@ if __name__ == "__main__":
     output_stats['df_stats'] = df_stats
 
     # Save the output statistics to a JSON file
-    with open('cleaned_data_stats.json', 'w') as f:
+    with open(f'output_stats_v{str(version)}.json', 'w') as f:
         json.dump(output_stats, f, indent=4)
 
     logger.info(f"Statistics:\n{json.dumps(output_stats, indent=4)}")
