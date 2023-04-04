@@ -117,12 +117,16 @@ if __name__ == "__main__":
 
     # Add statistics for each DataFrame to the output dictionary
     df_stats = {}
+    total_all_count = 0
+    total_clean_count = 0
     for df_name, df in dfs.items():
         all_keys = set(df[key_col])
         clean_keys = set(df[key_col][df[key_col].isin(super_set)])
         clean_count = len(clean_keys)
         all_count = len(all_keys)
         clean_percent = clean_count / all_count * 100 if all_count > 0 else 0
+        total_all_count += all_count
+        total_clean_count += clean_count
         df_stats[df_name] = {
             'clean_count': clean_count,
             'all_count': all_count,
@@ -130,7 +134,10 @@ if __name__ == "__main__":
             'clean_percent': clean_percent
         }
     output_stats['df_stats'] = df_stats
-
+    output_stats['total_all_count'] = total_all_count
+    output_stats['total_clean_count'] = total_clean_count
+    output_stats['total_problematic_keys'] = total_all_count - total_clean_count
+    output_stats['total_clean_percent'] = total_clean_count / total_all_count * 100 if total_all_count > 0 else 0
     # Save the output statistics to a JSON file
     with open(f'output_stats_v{str(version)}.json', 'w') as f:
         json.dump(output_stats, f, indent=4)
