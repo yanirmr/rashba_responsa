@@ -126,6 +126,7 @@ if __name__ == "__main__":
         df_stats[df_name] = {
             'clean_count': clean_count,
             'all_count': all_count,
+            'problematic keys': all_count - clean_count,
             'clean_percent': clean_percent
         }
     output_stats['df_stats'] = df_stats
