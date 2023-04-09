@@ -42,6 +42,9 @@ def handle_paren_key(key: str, filename: str):
 
 def handle_repeated_key(key, filename):
     logger.warning(f"Repeated key found in file '{filename}': {key}")
+    key_parts = re.split(r'[\s\n]+', key)
+    key_parts = [key_part.strip() for key_part in key_parts]
+    return key_parts
 
 
 def clean_validate_keys(df, key_col, key_pattern, df_name):
@@ -62,8 +65,9 @@ def clean_validate_keys(df, key_col, key_pattern, df_name):
             handle_minus_key(key, df_name)
         elif re.search(r'[\(\)\[\]]', key):
             handle_paren_key(key, df_name)
-        elif re.search(r'^[\u0590-\u05FF]+[\s\n]+[\u0590-\u05FF]+:[\u0590-\u05FF]+$', key):
-            handle_repeated_key(key, df_name)
+        elif re.search(fr'[\s\n]+{key_pattern}[\s\n]+{key_pattern}', key):
+            keys = handle_repeated_key(key, df_name)
+            clean_keys.update(keys)
         elif not re.match(key_pattern, key):
             handle_invalid_key(key, df_name)
         else:
@@ -83,12 +87,12 @@ def merge_filtered_dfs(filtered_dfs: list, key_col: str):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.1.0"
+    version_number = "0.2.1"
     version = semantic_version.Version(version_number)
 
     # Set input folder
     input_folder = "csv_formatted"
-    key_pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+$'
+    key_pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+'
     key_col = 'דפוס'
 
     # Read all CSV files in input folder into a dictionary of DataFrames
@@ -101,9 +105,22 @@ if __name__ == "__main__":
         super_set.update(clean_keys)
 
     # Filter and merge the DataFrames based on the cleaned and validated keys
+    # Add statistics for each DataFrame to the output dictionary
+    df_stats = {}
+    total_all_count = 0
+    total_clean_count = 0
+
     filtered_dfs = []
     for df_name, df in dfs.items():
-        filtered_df = df[df[key_col].isin(super_set)]
+        # Remove parentheses/brackets from key_col
+        df[key_col] = df[key_col].astype(str).str.replace(r'[\(\)\[\]]', '', regex=True)
+
+        # Split key_col by plus sign, whitespace, and newline
+        delimiters = r'\s+|\n+|\++'
+        df[key_col] = df[key_col].str.split(delimiters)
+        exploded_df = df.explode(key_col)
+
+        filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
         filtered_dfs.append(filtered_df)
     merged_df = merge_filtered_dfs(filtered_dfs, key_col)
 
@@ -115,24 +132,6 @@ if __name__ == "__main__":
     output_stats['num_of_files'] = len(dfs)
     output_stats['version'] = str(version)
 
-    # Add statistics for each DataFrame to the output dictionary
-    df_stats = {}
-    total_all_count = 0
-    total_clean_count = 0
-    for df_name, df in dfs.items():
-        all_keys = set(df[key_col])
-        clean_keys = set(df[key_col][df[key_col].isin(super_set)])
-        clean_count = len(clean_keys)
-        all_count = len(all_keys)
-        clean_percent = clean_count / all_count * 100 if all_count > 0 else 0
-        total_all_count += all_count
-        total_clean_count += clean_count
-        df_stats[df_name] = {
-            'clean_count': clean_count,
-            'all_count': all_count,
-            'problematic keys': all_count - clean_count,
-            'clean_percent': clean_percent
-        }
     output_stats['df_stats'] = df_stats
     output_stats['total_all_count'] = total_all_count
     output_stats['total_clean_count'] = total_clean_count
