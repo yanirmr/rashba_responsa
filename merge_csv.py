@@ -122,7 +122,23 @@ if __name__ == "__main__":
 
         filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
         filtered_dfs.append(filtered_df)
+
+        all_keys = set(exploded_df[key_col])
+        clean_keys = set(filtered_df[key_col])
+        all_count = len(all_keys)
+        clean_count = len(clean_keys)
+        clean_percent = clean_count / all_count * 100 if all_count > 0 else 0
+        total_all_count += all_count
+        total_clean_count += clean_count
+        df_stats[df_name] = {
+            'clean_count': clean_count,
+            'all_count': all_count,
+            'problematic keys': all_count - clean_count,
+            'clean_percent': clean_percent
+        }
+
     merged_df = merge_filtered_dfs(filtered_dfs, key_col)
+    merged_df.to_csv(f"merged_v{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
     output_stats = {}
