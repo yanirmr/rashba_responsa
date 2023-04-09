@@ -90,7 +90,7 @@ def merge_filtered_dfs(filtered_dfs: list, key_col: str):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.2.1"
+    version_number = "0.2.2"
     version = semantic_version.Version(version_number)
 
     # Set input folder
