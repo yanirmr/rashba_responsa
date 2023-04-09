@@ -38,6 +38,8 @@ def handle_minus_key(key: str, filename: str):
 
 def handle_paren_key(key: str, filename: str):
     logger.warning(f"Paren key found in file '{filename}': {key}")
+    key = re.sub(r'[\(\)\[\]]', '', key)
+    return key
 
 
 def handle_repeated_key(key, filename):
@@ -64,7 +66,8 @@ def clean_validate_keys(df, key_col, key_pattern, df_name):
         elif '-' in key:
             handle_minus_key(key, df_name)
         elif re.search(r'[\(\)\[\]]', key):
-            handle_paren_key(key, df_name)
+            key = handle_paren_key(key, df_name)
+            clean_keys.add(key)
         elif re.search(fr'[\s\n]+{key_pattern}[\s\n]+{key_pattern}', key):
             keys = handle_repeated_key(key, df_name)
             clean_keys.update(keys)
