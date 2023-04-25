@@ -1,41 +1,42 @@
-import pandas as pd
 import pytest
 
 from key_handler import KeyHandler
 
-test_data = [
-    ("א:צז", "א:צז", None),
-    (pd.NA, None, "nan_key"),
-    ("א:צז-א:צח", "א:צז-א:צח", "minus_key"),
-    ("ב:ג (בסוף)", "ב:ג", "paren_key"),
-    ("ב:ג מ:ד", ["מ:ד", "ב:ג"], "repeated_key"),
-]
+special_cases = {
+    "א:יט-א:כב": ["א:יט", "א:כב"]
+}
 
 
-@pytest.mark.parametrize("input_key, expected_output, handler_name", test_data)
-def test_key_handler(input_key, expected_output, handler_name):
-    # Initialize the KeyHandler instance
-    key_handler = KeyHandler()
+@pytest.fixture
+def key_handler():
+    return KeyHandler(special_cases=special_cases)
 
-    # Create a sample DataFrame
-    data = {"key_col": [input_key]}
-    df = pd.DataFrame(data)
 
-    # Define the key_pattern and df_name for testing purposes
-    key_pattern = r'^[\u0590-\u05FF]+'
-    df_name = "test_df"
+@pytest.mark.parametrize("input_key,expected_output", [
+    (None, []),
+    ("", []),
+    ("א:קז", ["א:קז"]),
+    ("ג:רמט ", ["ג:רמט"]),
+    ("א:יט  ב:טו", ["א:יט", "ב:טו"]),
+    ("א:יט \n  ב:טו", ["א:יט", "ב:טו"]),
+    ("א:יט \t ב:טו", ["א:יט", "ב:טו"]),
+    ("א:יט + ב:טו", ["א:יט", "ב:טו"]),
+    ("א-א:קסז", ["א-א:קסז"]),
+    ("א-א:רמט   א-א:ג", ["א-א:רמט", "א-א:ג"]),
+    ("א-א:רמט   (א-א:ג)", ["א-א:רמט", "א-א:ג"]),
+    ("א-א:רמט   [א-א:ג]", ["א-א:רמט", "א-א:ג"]),
+    ("א-א:רמט   [סוף]", ["א-א:רמט"]),
+    ("א-א:רמט   (אמצע)", ["א-א:רמט"]),
+    ("א:יט-א:כב", ["א:יט", "א:כב"]),
+])
+def test_key_handler(input_key, expected_output, key_handler):
+    assert key_handler.handle_key(input_key) == expected_output
 
-    # Clean and validate keys
-    cleaned_keys = key_handler.clean_validate_keys(df, "key_col", key_pattern, df_name)
 
-    # Check if the expected handler was called
-    if handler_name is not None:
-        assert key_handler.handler_counts[handler_name] == 1
+def test_unmatched_key(key_handler):
+    input_key = "א:א - א:ג"
+    expected_output = []
+    unmatched_key = "א:א - א:ג"
 
-    # Check if the output matches the expected output
-    if isinstance(expected_output, str):
-        assert cleaned_keys == {expected_output}
-    elif isinstance(expected_output, list):
-        assert cleaned_keys == set(expected_output)
-    else:
-        assert not cleaned_keys
+    assert key_handler.handle_key(input_key) == expected_output
+    assert unmatched_key in key_handler.unmatched_keys

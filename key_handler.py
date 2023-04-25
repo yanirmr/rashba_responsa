@@ -1,84 +1,42 @@
-import csv
-import json
 import logging
 import re
-
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
 class KeyHandler:
-    def __init__(self):
-        self.handler_counts = {
-            "nan_key": 0,
-            "minus_key": 0,
-            "paren_key": 0,
-            "repeated_key": 0,
-            "invalid_key": 0,
-        }
+    def __init__(self, special_cases=None):
+        self.special_cases = special_cases if special_cases is not None else {}
+        self.pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+'
+        self.pattern_with_prefix = r'^[\u0590-\u05FF]-[\u0590-\u05FF]+:[\u0590-\u05FF]+'
+        self.unmatched_keys = []
 
-    def register_handler(self, name, func):
-        self.handlers[name] = func
-        self.handler_counts[name] = 0
+    def handle_key(self, key):
+        if key is None or key == "":
+            return []
 
-    def handle_invalid_key(self, key: str, filename: str):
-        logger.warning(f"Invalid key found in file '{filename}': {key}")
-        self.handler_counts['invalid_key'] += 1
+        if key in self.special_cases:
+            return self.special_cases[key]
 
-    def handle_nan_key(self, key: str, filename: str):
-        logger.warning(f"NaN key found in file '{filename}': {key}")
-        self.handler_counts['nan_key'] += 1
-
-    def handle_minus_key(self, key: str, filename: str):
-        logger.warning(f"Minus key found in file '{filename}': {key}")
-        self.handler_counts['minus_key'] += 1
-
-    def handle_paren_key(self, key: str, filename: str):
-        logger.warning(f"Paren key found in file '{filename}': {key}")
-        self.handler_counts['paren_key'] += 1
+        # Remove parentheses and brackets
         key = re.sub(r'[\(\)\[\]]', '', key)
-        return key
 
-    def handle_repeated_key(self, key, filename):
-        logger.warning(f"Repeated key found in file '{filename}': {key}")
-        self.handler_counts['repeated_key'] += 1
-        key_parts = re.split(r'[\s\n]+', key)
-        key_parts = [key_part.strip() for key_part in key_parts]
-        return key_parts
+        # Split the key by plus sign, whitespace, and newline
+        delimiters = r'\s+|\n+|\t+|\++'
+        keys = re.split(delimiters, key)
 
-    def clean_validate_keys(self, df, key_col, key_pattern, df_name):
-        keys = set(df[key_col])
-        clean_keys = set()
-        for key in keys:
-            if pd.isna(key):
-                self.handle_nan_key(key, df_name)
-            elif '-' in key:
-                if re.match(key_pattern, key[2:]):  # check if the key is valid without the aleph-minus
-                    clean_keys.add(key)
-                else:
-                    self.handle_minus_key(key, df_name)
-            elif re.search(r'[\(\)\[\]]', key):
-                key = self.handle_paren_key(key, df_name)
-                clean_keys.add(key)
-            elif re.search(fr'[\s\n]+{key_pattern}[\s\n]+{key_pattern}', key):
-                keys = self.handle_repeated_key(key, df_name)
-                clean_keys.update(keys)
-            elif not re.match(key_pattern, key):
-                self.handle_invalid_key(key, df_name)
+        processed_keys = []
+        for k in keys:
+            k = k.strip()
+            if re.match(self.pattern, k) or re.match(self.pattern_with_prefix, k):
+                processed_keys.append(k)
             else:
-                key = key.strip()
-                clean_keys.add(key)
-        return clean_keys
+                logger.warning(f"Unmatched key: {k}")
+                self.unmatched_keys.append(k)
 
-    def export_summary(self, export_format='json', file_path=None):
-        if export_format == 'json':
-            if file_path is None:
-                file_path = 'handler_summary.json'
-            with open(file_path, 'w') as f:
-                json.dump(self.handler_counts, f, indent=4)
-        elif export_format == 'csv':
-            if file_path is None:
-                file_path = 'handler_summary.csv'
-            with open(file_path, 'w', newline='') as f:
-                writer = csv.writer(f)
+        return processed_keys
+
+    def save_unmatched_keys(self, filename):
+        with open(filename, 'w') as f:
+            for key in self.unmatched_keys:
+                f.write(f"{key}\n")
