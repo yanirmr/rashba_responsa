@@ -1,6 +1,6 @@
 import json
 import logging
-import os
+from pathlib import Path
 
 import pandas as pd
 import semantic_version
@@ -13,24 +13,35 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def read_csv_files_into_dict(folder_path: str):
+def read_csv_files_into_dict(folder_path: str) -> dict[str, pd.DataFrame]:
     """
     Read all CSV files in a folder into a dictionary of DataFrames.
     """
     dfs = {}
-    for i, filename in enumerate(os.listdir(folder_path)):
-        if filename.endswith(".csv"):
-            csv_path = os.path.join(folder_path, filename)
-            df_name = f"df_{filename}"
-            dfs[df_name] = pd.read_csv(csv_path, usecols=lambda col: col.lower() != "פתיחה וחתימה")
+    folder = Path(folder_path)
+
+    for file in folder.glob("*.csv"):
+        df_name = f"df_{file.name}"
+        dfs[df_name] = pd.read_csv(file, usecols=lambda col: col.lower() != "פתיחה וחתימה")
+
     return dfs
 
 
-def merge_filtered_dfs(filtered_dfs: list, key_col: str):
-    """
-    Merge a list of filtered DataFrames on a common key column.
-    Returns the merged DataFrame.
-    """
+def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, key_col: str) -> pd.DataFrame:
+    filtered_dfs = []
+
+    for df_name, df in dfs.items():
+        # Remove parentheses/brackets from key_col
+        df[key_col] = df[key_col].astype(str).str.replace(r'[\(\)\[\]]', '', regex=True)
+
+        # Split key_col by plus sign, whitespace, and newline
+        delimiters = r'\s+|\n+|\++'
+        df[key_col] = df[key_col].str.split(delimiters)
+        exploded_df = df.explode(key_col)
+
+        filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
+        filtered_dfs.append(filtered_df)
+
     merged_df = pd.concat(filtered_dfs).drop_duplicates(subset=key_col).reset_index(drop=True)
     return merged_df
 
@@ -61,28 +72,8 @@ if __name__ == "__main__":
         clean_count = len(clean_keys)
         stats.update_df_stats(df_name, clean_count, all_count, nan_count)
 
-    # Filter and merge the DataFrames based on the cleaned and validated keys
-    filtered_dfs = []
-    for df_name, df in dfs.items():
-        # Remove parentheses/brackets from key_col
-        df[key_col] = df[key_col].astype(str).str.replace(r'[\(\)\[\]]', '', regex=True)
+    merged_df = filter_and_merge_dataframes(dfs, super_set, key_col)
 
-        # Split key_col by plus sign, whitespace, and newline
-        delimiters = r'\s+|\n+|\++'
-        df[key_col] = df[key_col].str.split(delimiters)
-        exploded_df = df.explode(key_col)
-
-        filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
-        filtered_dfs.append(filtered_df)
-
-        all_keys = set(exploded_df[key_col])
-        clean_keys = set(filtered_df[key_col])
-        all_count = len(all_keys)
-        # count how many records are nan or empty strings in exploded_df[key_col]
-        nan_count = len(exploded_df[key_col][exploded_df[key_col] == 'nan']) + \
-                    len(exploded_df[key_col][exploded_df[key_col] == ''])
-
-    merged_df = merge_filtered_dfs(filtered_dfs, key_col)
     merged_df.to_csv(f"merged_v{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
