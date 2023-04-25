@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import semantic_version
 
-from key_handler import clean_validate_keys
+from key_handler import KeyHandler
 from statistics import Statistics
 
 # Initialize logging
@@ -53,20 +53,25 @@ if __name__ == "__main__":
 
     # Set input folder
     input_folder = "csv_formatted"
-    key_pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+'
     key_col = 'דפוס'
 
     # Read all CSV files in input folder into a dictionary of DataFrames
     dfs = read_csv_files_into_dict(input_folder)
 
     stats = Statistics()
+
+    # Initialize KeyHandler
+    key_handler = KeyHandler()  # Add special_cases if needed
+
     # Clean and validate keys in each DataFrame and collect into a super set
     super_set = set()
     for df_name, df in dfs.items():
-        clean_keys = clean_validate_keys(df, key_col, key_pattern, df_name)
+        clean_keys = set()
+        for key in df[key_col]:
+            cleaned_keys = key_handler.handle_key(key)
+            clean_keys.update(cleaned_keys)
         super_set.update(clean_keys)
         all_keys = set(df[key_col])
-        clean_keys = set(df[key_col][df[key_col].isin(super_set)])
         all_count = len(all_keys)
         nan_count = len(df[pd.isna(df[key_col])])
         clean_count = len(clean_keys)
@@ -84,3 +89,7 @@ if __name__ == "__main__":
         json.dump(output_stats, f, indent=4)
 
     logger.info(f"Statistics:\n{json.dumps(output_stats, indent=4)}")
+
+    # Save unmatched keys
+    key_handler.save_unmatched_keys(f'unmatched_keys_v{str(version)}.txt')
+    logger.info(f"Number of unmatched keys: {len(key_handler.unmatched_keys)}")

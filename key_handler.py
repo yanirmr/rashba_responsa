@@ -1,6 +1,8 @@
 import logging
 import re
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,7 +14,7 @@ class KeyHandler:
         self.unmatched_keys = []
 
     def handle_key(self, key):
-        if key is None or key == "":
+        if key is None or key == "" or pd.isna(key) or key.strip() == "":
             return []
 
         if key in self.special_cases:
@@ -28,8 +30,16 @@ class KeyHandler:
         processed_keys = []
         for k in keys:
             k = k.strip()
-            if re.match(self.pattern, k) or re.match(self.pattern_with_prefix, k):
+            if "-" in k and all(re.match(self.pattern, part.strip()) for part in k.split("-")):
+                if k in self.special_cases:
+                    processed_keys.extend(self.special_cases[k])
+                else:
+                    logger.warning(f"Unmatched key: {k}")
+                    self.unmatched_keys.append(k)
+
+            elif re.match(self.pattern, k) or re.match(self.pattern_with_prefix, k):
                 processed_keys.append(k)
+
             else:
                 logger.warning(f"Unmatched key: {k}")
                 self.unmatched_keys.append(k)

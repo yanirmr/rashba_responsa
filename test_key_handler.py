@@ -34,9 +34,9 @@ def test_key_handler(input_key, expected_output, key_handler):
 
 
 def test_unmatched_key(key_handler):
-    input_key = "א:א - א:ג"
+    input_key = "א:א-א:ג"
     expected_output = []
-    unmatched_key = "א:א - א:ג"
+    unmatched_key = "א:א-א:ג"
 
     assert key_handler.handle_key(input_key) == expected_output
     assert unmatched_key in key_handler.unmatched_keys
