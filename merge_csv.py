@@ -64,7 +64,10 @@ def clean_validate_keys(df, key_col, key_pattern, df_name):
         if pd.isna(key):
             handle_nan_key(key, df_name)
         elif '-' in key:
-            handle_minus_key(key, df_name)
+            if re.match(key_pattern, key[2:]):  # check if the key is valid without the aleph-minus
+                clean_keys.add(key)
+            else:
+                handle_minus_key(key, df_name)
         elif re.search(r'[\(\)\[\]]', key):
             key = handle_paren_key(key, df_name)
             clean_keys.add(key)
@@ -90,7 +93,7 @@ def merge_filtered_dfs(filtered_dfs: list, key_col: str):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.2.2"
+    version_number = "0.3.2"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -112,7 +115,7 @@ if __name__ == "__main__":
     df_stats = {}
     total_all_count = 0
     total_clean_count = 0
-
+    total_nan_count = 0
     filtered_dfs = []
     for df_name, df in dfs.items():
         # Remove parentheses/brackets from key_col
@@ -129,14 +132,19 @@ if __name__ == "__main__":
         all_keys = set(exploded_df[key_col])
         clean_keys = set(filtered_df[key_col])
         all_count = len(all_keys)
+        # count how many records are nan or empty strings in exploded_df[key_col]
+        nan_count = len(exploded_df[key_col][exploded_df[key_col] == 'nan']) + \
+                    len(exploded_df[key_col][exploded_df[key_col] == ''])
         clean_count = len(clean_keys)
         clean_percent = clean_count / all_count * 100 if all_count > 0 else 0
         total_all_count += all_count
         total_clean_count += clean_count
+        total_nan_count += nan_count
         df_stats[df_name] = {
             'clean_count': clean_count,
             'all_count': all_count,
-            'problematic keys': all_count - clean_count,
+            'nan_count': nan_count,
+            'problematic keys': all_count - clean_count - nan_count,
             'clean_percent': clean_percent
         }
 
@@ -154,6 +162,7 @@ if __name__ == "__main__":
     output_stats['df_stats'] = df_stats
     output_stats['total_all_count'] = total_all_count
     output_stats['total_clean_count'] = total_clean_count
+    output_stats['total_nan_count'] = total_nan_count
     output_stats['total_problematic_keys'] = total_all_count - total_clean_count
     output_stats['total_clean_percent'] = total_clean_count / total_all_count * 100 if total_all_count > 0 else 0
     # Save the output statistics to a JSON file
