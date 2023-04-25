@@ -6,6 +6,8 @@ import re
 import pandas as pd
 import semantic_version
 
+from statistics import Statistics
+
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -93,7 +95,7 @@ def merge_filtered_dfs(filtered_dfs: list, key_col: str):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.3.2"
+    version_number = "0.4.2"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -104,18 +106,20 @@ if __name__ == "__main__":
     # Read all CSV files in input folder into a dictionary of DataFrames
     dfs = read_csv_files_into_dict(input_folder)
 
+    stats = Statistics()
     # Clean and validate keys in each DataFrame and collect into a super set
     super_set = set()
     for df_name, df in dfs.items():
         clean_keys = clean_validate_keys(df, key_col, key_pattern, df_name)
         super_set.update(clean_keys)
+        all_keys = set(df[key_col])
+        clean_keys = set(df[key_col][df[key_col].isin(super_set)])
+        all_count = len(all_keys)
+        nan_count = len(df[pd.isna(df[key_col])])
+        clean_count = len(clean_keys)
+        stats.update_df_stats(df_name, clean_count, all_count, nan_count)
 
     # Filter and merge the DataFrames based on the cleaned and validated keys
-    # Add statistics for each DataFrame to the output dictionary
-    df_stats = {}
-    total_all_count = 0
-    total_clean_count = 0
-    total_nan_count = 0
     filtered_dfs = []
     for df_name, df in dfs.items():
         # Remove parentheses/brackets from key_col
@@ -135,37 +139,14 @@ if __name__ == "__main__":
         # count how many records are nan or empty strings in exploded_df[key_col]
         nan_count = len(exploded_df[key_col][exploded_df[key_col] == 'nan']) + \
                     len(exploded_df[key_col][exploded_df[key_col] == ''])
-        clean_count = len(clean_keys)
-        clean_percent = clean_count / all_count * 100 if all_count > 0 else 0
-        total_all_count += all_count
-        total_clean_count += clean_count
-        total_nan_count += nan_count
-        df_stats[df_name] = {
-            'clean_count': clean_count,
-            'all_count': all_count,
-            'nan_count': nan_count,
-            'problematic keys': all_count - clean_count - nan_count,
-            'clean_percent': clean_percent
-        }
 
     merged_df = merge_filtered_dfs(filtered_dfs, key_col)
     merged_df.to_csv(f"merged_v{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
-    output_stats = {}
+    output_stats = stats.get_output_stats(len(super_set), len(dfs), str(version))
 
-    # Add number of clean keys to the output dictionary
-    output_stats['num_clean_keys'] = len(super_set)
-    output_stats['num_of_files'] = len(dfs)
-    output_stats['version'] = str(version)
-
-    output_stats['df_stats'] = df_stats
-    output_stats['total_all_count'] = total_all_count
-    output_stats['total_clean_count'] = total_clean_count
-    output_stats['total_nan_count'] = total_nan_count
-    output_stats['total_problematic_keys'] = total_all_count - total_clean_count
-    output_stats['total_clean_percent'] = total_clean_count / total_all_count * 100 if total_all_count > 0 else 0
-    # Save the output statistics to a JSON file
+    # Write the output statistics to a JSON file
     with open(f'output_stats_v{str(version)}.json', 'w') as f:
         json.dump(output_stats, f, indent=4)
 
