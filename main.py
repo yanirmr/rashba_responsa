@@ -1,3 +1,8 @@
+# TODO: manually add special cases to key_handler.py (e.g. make the ranges of keys explicit)
+# TODO: check why the problematic keys are not being counted correctly (negative values)
+# TODO: make manual test on real data to verify results
+# TODO: handle the files with low clean keys percentage
+
 import json
 import logging
 from pathlib import Path
@@ -48,7 +53,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.6.2"
+    version_number = "0.7.2"
     version = semantic_version.Version(version_number)
 
     # Set input folder
