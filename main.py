@@ -53,7 +53,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.7.2"
+    version_number = "0.8.3"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -66,7 +66,9 @@ if __name__ == "__main__":
     stats = Statistics()
 
     # Initialize KeyHandler
-    key_handler = KeyHandler()  # Add special_cases if needed
+    special_cases_filename = "special_cases.json"
+    special_cases = KeyHandler.load_special_cases(special_cases_filename)
+    key_handler = KeyHandler(special_cases)  # Add special_cases if needed
 
     # Clean and validate keys in each DataFrame and collect into a super set
     super_set = set()

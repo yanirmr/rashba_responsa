@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -12,6 +13,12 @@ class KeyHandler:
         self.pattern = r'^[\u0590-\u05FF]+:[\u0590-\u05FF]+'
         self.pattern_with_prefix = r'^[\u0590-\u05FF]-[\u0590-\u05FF]+:[\u0590-\u05FF]+'
         self.unmatched_keys = []
+
+    @staticmethod
+    def load_special_cases(filename):
+        with open(filename, 'r', encoding='utf-8') as f:
+            special_cases = json.load(f)
+        return special_cases
 
     def handle_key(self, key):
         if key is None or key == "" or pd.isna(key) or key.strip() == "":
