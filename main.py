@@ -17,6 +17,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def filter_values(cell):
+    """     Filter out '--' and 'nan' values from a list within a DataFrame cell.
+    :param cell: Cell content, which can either be a string or a list of strings/floats.
+    :return: The original cell content, but in case of a list, without '--' and 'nan' values.
+                         If a list is empty after filtering, None is returned instead.
+
+    """
+    if isinstance(cell, list):
+        filtered_list = [x for x in cell if x != "--" and not pd.isna(x)]
+        return filtered_list if filtered_list else None
+    return cell
+
+
+def list_to_string(l: list) -> str:
+    """
+    Convert a list to a semicolon-separated string without brackets.
+
+    :param l: The list to convert.
+    :return: The list as a string, with semicolons between elements and no brackets.
+    """
+    return '; '.join(str(e) for e in l if e is not None)
+
+
 def read_csv_files_into_dict(folder_path: str) -> dict[str, pd.DataFrame]:
     """
     Read all CSV files in a folder into a dictionary of DataFrames.
@@ -53,12 +76,14 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
         else:
             merged_df = merged_df.merge(df, on=key_col, how='outer', suffixes=('', f'_{df_name}'))
 
+    merged_df = merged_df.applymap(filter_values)
+
     return merged_df
 
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.8.10"
+    version_number = "1.0.0"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -91,7 +116,9 @@ if __name__ == "__main__":
 
     merged_df = filter_and_merge_dataframes(dfs, super_set, key_col)
 
-    merged_df.to_csv(Path("outputs") / f"merged_v{str(version)}.csv", index=False)
+    formatted_merged_df = merged_df.applymap(lambda cell: list_to_string(cell) if isinstance(cell, list) else cell)
+
+    formatted_merged_df.to_csv(Path("outputs") / f"merged_v{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
     output_stats = stats.get_output_stats(len(super_set), len(dfs), str(version))
