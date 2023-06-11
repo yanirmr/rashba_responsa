@@ -1,4 +1,4 @@
-# TODO: manually add special cases to key_handler.py (e.g. make the ranges of keys explicit)
+# TODO: BUG: in case of several keys or range, the Aleph keys ignored
 # TODO: check why the problematic keys are not being counted correctly (negative values)
 # TODO: make manual test on real data to verify results
 # TODO: handle the files with low clean keys percentage
@@ -53,7 +53,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.8.3"
+    version_number = "0.8.5"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -86,17 +86,17 @@ if __name__ == "__main__":
 
     merged_df = filter_and_merge_dataframes(dfs, super_set, key_col)
 
-    merged_df.to_csv(f"merged_v{str(version)}.csv", index=False)
+    merged_df.to_csv(Path("outputs") / f"merged_v{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
     output_stats = stats.get_output_stats(len(super_set), len(dfs), str(version))
 
     # Write the output statistics to a JSON file
-    with open(f'output_stats_v{str(version)}.json', 'w') as f:
+    with open(Path("outputs") / f'output_stats_v{str(version)}.json', 'w') as f:
         json.dump(output_stats, f, indent=4)
 
     logger.info(f"Statistics:\n{json.dumps(output_stats, indent=4)}")
 
     # Save unmatched keys
-    key_handler.save_unmatched_keys(f'unmatched_keys_v{str(version)}.txt')
+    key_handler.save_unmatched_keys(Path("outputs") / f'unmatched_keys_v{str(version)}.txt')
     logger.info(f"Number of unmatched keys: {len(key_handler.unmatched_keys)}")
