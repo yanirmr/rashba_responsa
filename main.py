@@ -37,11 +37,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
     for df_name, df in dfs.items():
         # Remove parentheses/brackets from key_col
-        df[key_col] = df[key_col].astype(str).str.replace(r'[\(\)\[\]]', '', regex=True)
-
-        # Split key_col by plus sign, whitespace, and newline
-        delimiters = r'\s+|\n+|\++'
-        df[key_col] = df[key_col].str.split(delimiters)
+        df[key_col] = df[key_col].apply(lambda x: key_handler.handle_key(x))
         exploded_df = df.explode(key_col)
 
         filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
