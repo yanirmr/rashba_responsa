@@ -1,4 +1,3 @@
-# TODO: BUG: in case of several keys or range, the Aleph keys ignored
 # TODO: check why the problematic keys are not being counted correctly (negative values)
 # TODO: make manual test on real data to verify results
 # TODO: handle the files with low clean keys percentage
@@ -46,13 +45,16 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
         filtered_dfs.append(filtered_df)
 
-    merged_df = pd.concat(filtered_dfs).drop_duplicates(subset=key_col).reset_index(drop=True)
+    merged_df = filtered_dfs[0]  # Start with the first dataframe
+
+    for df in filtered_dfs[1:]:  # Then go through the rest of the dataframes
+        merged_df = merged_df.merge(df, on=key_col, how='outer')  # Merge on the key_col    return merged_df
     return merged_df
 
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.8.8"
+    version_number = "0.8.9"
     version = semantic_version.Version(version_number)
 
     # Set input folder
