@@ -49,7 +49,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.8.6"
+    version_number = "0.8.7"
     version = semantic_version.Version(version_number)
 
     # Set input folder
