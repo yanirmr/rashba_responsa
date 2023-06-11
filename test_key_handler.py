@@ -3,7 +3,7 @@ import pytest
 from key_handler import KeyHandler
 
 special_cases = {
-    "א:יט-א:כב": ["א:יט", "א:כב"]
+    "א:יט-א:כב": ["א:יט", "א:כ", "א:כא", "א:כב"],
 }
 
 
@@ -27,7 +27,7 @@ def key_handler():
     ("א-א:רמט   [א-א:ג]", ["א-א:רמט", "א-א:ג"]),
     ("א-א:רמט   [סוף]", ["א-א:רמט"]),
     ("א-א:רמט   (אמצע)", ["א-א:רמט"]),
-    ("א:יט-א:כב", ["א:יט", "א:כב"]),
+    ("א:יט-א:כב", ["א:יט", "א:כ", "א:כא", "א:כב"]),
 ])
 def test_key_handler(input_key, expected_output, key_handler):
     assert key_handler.handle_key(input_key) == expected_output

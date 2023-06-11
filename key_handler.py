@@ -37,12 +37,12 @@ class KeyHandler:
         processed_keys = []
         for k in keys:
             k = k.strip()
-            if "-" in k and all(re.match(self.pattern, part.strip()) for part in k.split("-")):
-                if k in self.special_cases:
-                    processed_keys.extend(self.special_cases[k])
-                else:
-                    logger.warning(f"Unmatched key: {k}")
-                    self.unmatched_keys.append(k)
+            if k in self.special_cases:
+                processed_keys.extend(self.special_cases[k])
+
+            elif "-" in k and all(re.match(self.pattern, part.strip()) for part in k.split("-")):
+                logger.warning(f"Unmatched key: {k}")
+                self.unmatched_keys.append(k)
 
             elif re.match(self.pattern, k) or re.match(self.pattern_with_prefix, k):
                 processed_keys.append(k)
@@ -54,6 +54,6 @@ class KeyHandler:
         return processed_keys
 
     def save_unmatched_keys(self, filename):
-        with open(filename, 'w') as f:
+        with open(filename, 'w', encoding='utf-8') as f:
             for key in self.unmatched_keys:
                 f.write(f"{key}\n")

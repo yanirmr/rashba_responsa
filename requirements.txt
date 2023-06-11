@@ -1,2 +1,3 @@
 pandas
 semantic_version
+pytest
