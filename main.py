@@ -41,6 +41,9 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
         exploded_df = df.explode(key_col)
 
         filtered_df = exploded_df[exploded_df[key_col].isin(super_set)]
+        # Group the dataframe by 'key_col' and aggregate the values into a list
+        filtered_df = filtered_df.groupby(key_col).agg(list).reset_index()
+
         filtered_dfs.append(filtered_df)
 
     merged_df = pd.concat(filtered_dfs).drop_duplicates(subset=key_col).reset_index(drop=True)
