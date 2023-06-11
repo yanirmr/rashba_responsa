@@ -32,7 +32,7 @@ def read_csv_files_into_dict(folder_path: str) -> dict[str, pd.DataFrame]:
 
 
 def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, key_col: str) -> pd.DataFrame:
-    filtered_dfs = []
+    filtered_dfs = {}
 
     for df_name, df in dfs.items():
         # Remove parentheses/brackets from key_col
@@ -43,18 +43,22 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
         # Group the dataframe by 'key_col' and aggregate the values into a list
         filtered_df = filtered_df.groupby(key_col).agg(list).reset_index()
 
-        filtered_dfs.append(filtered_df)
+        filtered_dfs[df_name] = filtered_df
 
-    merged_df = filtered_dfs[0]  # Start with the first dataframe
+    merged_df = pd.DataFrame()
 
-    for df in filtered_dfs[1:]:  # Then go through the rest of the dataframes
-        merged_df = merged_df.merge(df, on=key_col, how='outer')  # Merge on the key_col    return merged_df
+    for df_name, df in filtered_dfs.items():
+        if merged_df.empty:
+            merged_df = df
+        else:
+            merged_df = merged_df.merge(df, on=key_col, how='outer', suffixes=('', f'_{df_name}'))
+
     return merged_df
 
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "0.8.9"
+    version_number = "0.8.10"
     version = semantic_version.Version(version_number)
 
     # Set input folder
