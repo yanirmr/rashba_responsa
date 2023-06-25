@@ -62,12 +62,15 @@ def hebrew_to_integer(hebrew_numeral):
             total += hebrew_values[char]
         elif char == "'":
             total *= 1000
-        elif char == " ":
+        elif char in [" ", ".", "ץ", "?", "-", ","]:
             continue
         else:
             raise ValueError(f"Invalid character '{char}' in Hebrew numeral.")
 
     return total
+
+
+import logging
 
 
 def hebrew_keys_to_numeric_keys(hebrew_keys):
@@ -78,25 +81,29 @@ def hebrew_keys_to_numeric_keys(hebrew_keys):
     hebrew_keys (str): A string representing a key in Hebrew numerals.
 
     Returns:
-    float: The float representation of the key for ordering.
-
-    Raises:
-    ValueError: If the input string is not in the expected format.
+    float or str: The float representation of the key for ordering, or the original string if it is not in the expected format.
     """
 
-    # Split the input string into two parts using ":" as a separator
-    parts = hebrew_keys.split(':')
-    if len(parts) != 2:
-        raise ValueError("The input string is not in the expected format.")
+    try:
+        # Split the input string into two parts using ":" as a separator
+        parts = hebrew_keys.split(':')
+        if len(parts) != 2:
+            raise ValueError("The input string is not in the expected format.")
 
-    # Convert each part to an integer using the hebrew_to_integer function
-    integer_part = hebrew_to_integer(parts[0])
-    decimal_part = hebrew_to_integer(parts[1])
+        # Convert each part to an integer using the hebrew_to_integer function
+        integer_part = hebrew_to_integer(parts[0])
+        decimal_part = hebrew_to_integer(parts[1])
 
-    # Construct the floating point number
-    numeric_key = integer_part + (decimal_part / 10000)
+        # Construct the floating point number
+        numeric_key = integer_part + (decimal_part / 10000)
 
-    return numeric_key
+        return numeric_key
+
+    except ValueError as e:
+        # Log a warning with the input string
+        logging.warning(f"{e} Input was: {hebrew_keys}")
+        # Return the input string
+        return hebrew_keys
 
 
 def filter_values(cell):
@@ -114,23 +121,30 @@ def filter_values(cell):
 
 def format_print_marks_over_one_thousand(s: str) -> str:
     """
-     This function takes a string formatted as "A-B:C",
-     where A, B, and C are placeholders for actual string contents.
-     It modifies the format to "A': B:C".
+    This function takes a string formatted as "A-B:C",
+    where A, B, and C are placeholders for actual string contents.
+    It modifies the format to "A:B' C".
 
-     :param s: A string formatted as "A-B:C".
-     :return: A string formatted as "A:B' C".
-     """
+    :param s: A string formatted as "A-B:C".
+    :return: A string formatted as "A:B' C" or the original string if it is not in the expected format.
+    """
 
-    # Check if input string is in the correct format
-    if "-" not in s or ":" not in s:
-        raise ValueError("The input string is not in the expected format.")
+    try:
+        # Check if input string is in the correct format
+        if "-" not in s or ":" not in s:
+            raise ValueError("The input string is not in the expected format.")
 
-    # Split the string into three parts using "-" and ":" as separators
-    first_part, remaining = s.split('-', 1)
-    second_part, third_part = remaining.split(':', 1)
+        # Split the string into three parts using "-" and ":" as separators
+        first_part, remaining = s.split('-', 1)
+        second_part, third_part = remaining.split(':', 1)
 
-    return f"{first_part}:{second_part}' {third_part}"
+        return f"{first_part}:{second_part}' {third_part}"
+
+    except ValueError as e:
+        # Print a warning with the input string
+        print(f"Warning: {e} Input was: {s}")
+        # Return the input string as output
+        return s
 
 
 def list_to_string(l: list) -> str:
@@ -220,6 +234,19 @@ if __name__ == "__main__":
     merged_df = filter_and_merge_dataframes(dfs, super_set, key_col)
 
     formatted_merged_df = merged_df.applymap(lambda cell: list_to_string(cell) if isinstance(cell, list) else cell)
+
+    # run format_print_marks_over_one_thousand on each cell in 'דפוס" column if the cell inclides a '-' and a ':'
+    formatted_merged_df[key_col] = formatted_merged_df[key_col].apply(
+        lambda cell: format_print_marks_over_one_thousand(cell) if isinstance(cell,
+                                                                              str) and '-' in cell and ':' in cell else cell)
+
+    # add new column of numeric keys based on hebrew keys from 'דפוס' column
+    formatted_merged_df['numeric_key'] = formatted_merged_df[key_col].apply(
+        lambda cell: hebrew_keys_to_numeric_keys(cell) if isinstance(cell, str) else cell)
+
+    # make numeric_key column the first column in the dataframe
+    formatted_merged_df = formatted_merged_df[
+        ['numeric_key'] + [col for col in formatted_merged_df.columns if col != 'numeric_key']]
 
     formatted_merged_df.to_csv(Path("outputs") / f"merged_v{str(version)}.csv", index=False)
 
