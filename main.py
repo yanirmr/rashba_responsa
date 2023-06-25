@@ -17,6 +17,88 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def hebrew_to_integer(hebrew_numeral):
+    """
+    Converts a string representing a Hebrew numeral into an integer.
+
+    Parameters:
+    hebrew_numeral (str): A string representing a Hebrew numeral.
+
+    Returns:
+    int: The integer value of the Hebrew numeral.
+
+    Raises:
+    ValueError: If the input string contains characters that are not valid Hebrew numerals.
+    """
+
+    hebrew_values = {
+        'א': 1,
+        'ב': 2,
+        'ג': 3,
+        'ד': 4,
+        'ה': 5,
+        'ו': 6,
+        'ז': 7,
+        'ח': 8,
+        'ט': 9,
+        'י': 10,
+        'כ': 20,
+        'ל': 30,
+        'מ': 40,
+        'נ': 50,
+        'ס': 60,
+        'ע': 70,
+        'פ': 80,
+        'צ': 90,
+        'ק': 100,
+        'ר': 200,
+        'ש': 300,
+        'ת': 400,
+    }
+
+    total = 0
+    for char in hebrew_numeral:
+        if char in hebrew_values:
+            total += hebrew_values[char]
+        elif char == "'":
+            total *= 1000
+        elif char == " ":
+            continue
+        else:
+            raise ValueError(f"Invalid character '{char}' in Hebrew numeral.")
+
+    return total
+
+
+def hebrew_keys_to_numeric_keys(hebrew_keys):
+    """
+    Converts a string representing a key in Hebrew numerals into a float for key ordering.
+
+    Parameters:
+    hebrew_keys (str): A string representing a key in Hebrew numerals.
+
+    Returns:
+    float: The float representation of the key for ordering.
+
+    Raises:
+    ValueError: If the input string is not in the expected format.
+    """
+
+    # Split the input string into two parts using ":" as a separator
+    parts = hebrew_keys.split(':')
+    if len(parts) != 2:
+        raise ValueError("The input string is not in the expected format.")
+
+    # Convert each part to an integer using the hebrew_to_integer function
+    integer_part = hebrew_to_integer(parts[0])
+    decimal_part = hebrew_to_integer(parts[1])
+
+    # Construct the floating point number
+    numeric_key = integer_part + (decimal_part / 10000)
+
+    return numeric_key
+
+
 def filter_values(cell):
     """     Filter out '--' and 'nan' values from a list within a DataFrame cell.
     :param cell: Cell content, which can either be a string or a list of strings/floats.
@@ -28,6 +110,27 @@ def filter_values(cell):
         filtered_list = [x for x in cell if x != "--" and not pd.isna(x)]
         return filtered_list if filtered_list else None
     return cell
+
+
+def format_print_marks_over_one_thousand(s: str) -> str:
+    """
+     This function takes a string formatted as "A-B:C",
+     where A, B, and C are placeholders for actual string contents.
+     It modifies the format to "A': B:C".
+
+     :param s: A string formatted as "A-B:C".
+     :return: A string formatted as "A:B' C".
+     """
+
+    # Check if input string is in the correct format
+    if "-" not in s or ":" not in s:
+        raise ValueError("The input string is not in the expected format.")
+
+    # Split the string into three parts using "-" and ":" as separators
+    first_part, remaining = s.split('-', 1)
+    second_part, third_part = remaining.split(':', 1)
+
+    return f"{first_part}:{second_part}' {third_part}"
 
 
 def list_to_string(l: list) -> str:
@@ -83,7 +186,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.0.0"
+    version_number = "1.0.1"
     version = semantic_version.Version(version_number)
 
     # Set input folder
