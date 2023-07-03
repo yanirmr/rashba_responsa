@@ -9,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import semantic_version
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 from key_handler import KeyHandler
 from statistics import Statistics
@@ -16,6 +18,37 @@ from statistics import Statistics
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def create_index_pdf(df, pdf_filename):
+    pdf = canvas.Canvas(pdf_filename, pagesize=letter)
+    width, height = letter
+
+    x = 50  # Horizontal position
+    y = height - 50  # Vertical position, starting from top
+
+    for index, row in df.iterrows():
+        key = row[0]
+        pdf.setFont("Helvetica", 14)
+        pdf.drawString(x, y, f'{key}:')
+        y -= 20  # Move to next line
+
+        # Loop through each document
+        for i in range(1, len(row)):
+            if pd.notnull(row[i]):  # Check if value is not null
+                doc = df.columns[i]
+                value = row[i]
+                pdf.setFont("Helvetica", 12)
+                pdf.drawString(x + 10, y, f'{doc}: {value}')  # Indent doc details
+                y -= 20  # Move to next line
+        y -= 10  # Add extra space between keys
+
+        # Check if we're running out of space and need a new page
+        if y < 50:
+            pdf.showPage()
+            y = height - 50  # Reset y
+
+    pdf.save()
 
 
 def hebrew_to_integer(hebrew_numeral):
@@ -69,6 +102,7 @@ def hebrew_to_integer(hebrew_numeral):
             raise ValueError(f"Invalid character '{char}' in Hebrew numeral.")
 
     return total
+
 
 def hebrew_keys_to_numeric_keys(hebrew_keys):
     """
@@ -151,8 +185,10 @@ def list_to_string(l: list) -> str:
     :param l: The list to convert.
     :return: The list as a string, with semicolons between elements and no brackets.
     """
-    return '; '.join(str(e) for e in l if e is not None)
+    # Exclude None or NaN values
+    l = [e for e in l if e is not None and e == e]
 
+    return '; '.join(str(e) for e in l) if l else ''
 
 def read_csv_files_into_dict(folder_path: str) -> dict[str, pd.DataFrame]:
     """
@@ -195,9 +231,97 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
     return merged_df
 
 
+def organized_df_cols(formatted_merged_df):
+    # llst of columsn pairs to bo concatenated and column target names
+    cols_to_concat = [
+        (["Cambridge 499_table_0", """קמברידג' 499 ח"ב"""], "קמברידג' 499")]
+
+    # concatenate columns
+    for cols, target in cols_to_concat:
+        formatted_merged_df[target] = formatted_merged_df[cols].apply(lambda x: list_to_string(x), axis=1)
+        formatted_merged_df = formatted_merged_df.drop(columns=cols)
+    formatted_merged_df = formatted_merged_df.rename(
+        columns={"Cambridge 498 - part 2_table_0": "קמברידג' 498",
+                 "Cambridge 500_table_0": "קמברידג' 500",
+                 "ניו יורק 1423": "ניו יורק 1423",
+                 "אוקספורד 2365 כרך א סימן ודף": "אוקספורד 2365 כרך א",
+                 "ניו יורק 1383": 'ניו יורק 1383 הבתים ח"א',
+                 'אוקספורד 2365 כרך ב': 'אוקספורד 2365 כרך ב',
+                 'לונדון 10753': 'לונדון 10753',
+                 'מוסקבה 549': 'מוסקבה 549',
+                 'ניו יורק 1383_df_HaBattim vol 2_table_0.csv': 'ניו יורק 1383 הבתים ח"ב',
+                 'ניו יורק 1383 - השלמות': 'ניו יורק 1383 הבתים השלמות',
+                 'מוסקבה 549_df_HaBattim vol 2_table_1.csv': 'מוסקבה 549 הבתים',
+                 'Jerusalem 1987_table_0': 'ירושלים 1987',
+                 'כ"י וושינגטון 157': 'וושינגטון 157',
+                 'Benayahu O 204': 'בניהו ע 204',
+                 'London BL 569_table_0': 'לונדון 569',
+                 'כ"י מונטיפיורי 124': 'מונטיפיורי 124',
+                 'London BL 570_table_0': 'לונדון 570',
+                 'London BL 571_table_0': 'לונדון 571 ח"א',
+                 'London BL 571_table_1': 'לונדון 571 ח"ב',
+                 'London BL 571_table_2': 'לונדון 571 ח"ג',
+                 'כ"י שוקן 2055': 'שוקן 2055',
+                 'London BL 572_table_0': 'לונדון 572',
+                 'Montefiore 102_table_0': 'מונטיפיורי 102',
+                 'כ"י מונטיפיורי 130 סימן ודף': 'מונטיפיורי 130',
+                 'כ"י מונטיפיורי 100 דף': 'מונטיפיורי 100',
+                 'Moscow 1378_table_0': 'מוסקבה 1378',
+                 'מוסקבה 527 סימן ודף': 'מוסקבה 527',
+                 'Moscow 595_table_0': 'מוסקבה 595',
+                 'מונטיפיורי 103 סימן ודף': 'מונטיפיורי 103',
+                 'New York 1422_table_0': 'ניו יורק 1422',
+                 'New York 1476_table_0': 'ניו יורק 1476',
+                 'New York 9689_table_0': 'ניו יורק 9689',
+                 'Orhot Haim II_table_0': 'אורחות חיים ח"ב מוסקבה 107',
+                 'אוקספורד 2550 סימן ודף': 'אוקספורד 2550',
+                 'כ"י אלפנדארי': 'אלפנדארי',
+                 'לונדון 10099': 'לונדון 10099',
+                 'Oxford 670_table_0': 'מרדכי אוקספורד 670',
+                 'אוקספורד 781 סימן ודף': 'אוקספורד 781',
+                 'ירושלים 90': 'ירושלים 90',
+                 'מוסקבה 1013': 'מוסקבה 1013',
+                 'Oxford 817_table_0': 'אוקספורד 817',
+                 'Paris 411_table_0': 'פריז 411',
+                 'Paris 416_table_0': 'פריז 416',
+                 'Parma 3525_table_0': 'פרמה 3525',
+                 'פריז 585': 'פריז 585',
+                 'Parma 426_2605_table_0': 'פרמה 2605',
+                 'Small collections_table_0': 'דפוס קושטא רעו',
+                 'Small collections_table_1': 'ניו יורק 2425',
+                 'Small collections_table_10': 'גניזה שטרסבורג 4104.7',
+                 'Small collections_table_11': "גניזה קמברידג' TS 13J24.26",
+                 'Small collections_table_2': 'מינכן 356/14',
+                 'Small collections_table_3': 'וושינגטון 157',
+                 'Small collections_table_4': 'ירושלים 7817',
+                 'Small collections_table_5': 'ירושלים 1800.713',
+                 'Small collections_table_6': "גניזה קמברידג' TS AS 91.289 + TS AS 82.238",
+                 'Small collections_table_7': 'גניזה ניו יורק 2397.9',
+                 'Small collections_table_8': 'גניזה ניו יורק 2626.1-4',
+                 'Small collections_table_9': 'גניזה PARIS AIU III B 134 + ניו יורק, JTS ENA 3153.3',
+                 'Vercelli_table_0': "מרדכי וירצ'לי 1"})
+
+    # delete the col that is name is "Cambridge 498 - part 1_table_0"
+    formatted_merged_df = formatted_merged_df.drop(
+        columns=["Cambridge 498 - part 1_table_0",
+                 "פתיחה",
+                 "פתיחה_df_Small collections_table_2.csv",
+                 "פתיחה וחתימה.1"])
+
+    numeric_key = formatted_merged_df['numeric_key']
+    formatted_merged_df = formatted_merged_df.drop('numeric_key', axis=1)
+
+    # Sort the rest of the columns alphabetically
+    formatted_merged_df = formatted_merged_df.sort_index(axis=1)
+
+    # Add the 'numeric_key' column back
+    formatted_merged_df.insert(0, 'numeric_key', numeric_key)
+    return formatted_merged_df
+
+
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.0.2"
+    version_number = "1.0.3"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -236,9 +360,7 @@ if __name__ == "__main__":
     formatted_merged_df[key_col] = formatted_merged_df[key_col].apply(
         lambda cell: format_print_marks_over_one_thousand(cell) if isinstance(cell,
                                                                               str) and '-' in cell and ':' in cell else cell)
-    # rename the column "Jerusalem 1987_table_0_df_Jerusalem Benayahu O 204_table_0.csv" to "Benayahu O 204"
-    formatted_merged_df = formatted_merged_df.rename(
-        columns={"Jerusalem 1987_table_0_df_Jerusalem Benayahu O 204_table_0.csv": "Benayahu O 204"})
+
     # remove ".ץץ" from 'דפוס' column
     formatted_merged_df[key_col] = formatted_merged_df[key_col].apply(
         lambda cell: cell.replace(".ץץ", "") if isinstance(cell, str) else cell)
@@ -247,9 +369,8 @@ if __name__ == "__main__":
     formatted_merged_df['numeric_key'] = formatted_merged_df[key_col].apply(
         lambda cell: hebrew_keys_to_numeric_keys(cell) if isinstance(cell, str) else cell)
 
-    # make numeric_key column the first column in the dataframe
-    formatted_merged_df = formatted_merged_df[
-        ['numeric_key'] + [col for col in formatted_merged_df.columns if col != 'numeric_key']]
+    formatted_merged_df = organized_df_cols(formatted_merged_df)
+
     # order the formatted_merged_df by numeric_key column
     # Replace string values in 'numeric_key' column with numpy.inf
     formatted_merged_df['numeric_key'] = pd.to_numeric(formatted_merged_df['numeric_key'], errors='coerce').fillna(
@@ -269,3 +390,5 @@ if __name__ == "__main__":
     # Save unmatched keys
     key_handler.save_unmatched_keys(Path("outputs") / f'unmatched_keys_v{str(version)}.txt')
     logger.info(f"Number of unmatched keys: {len(key_handler.unmatched_keys)}")
+
+    # create_index_pdf(formatted_merged_df, f"outputs\\rashba_responsa_index_{str(version)}.pdf")
