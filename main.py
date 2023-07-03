@@ -6,6 +6,7 @@ import json
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import semantic_version
 
@@ -69,10 +70,6 @@ def hebrew_to_integer(hebrew_numeral):
 
     return total
 
-
-import logging
-
-
 def hebrew_keys_to_numeric_keys(hebrew_keys):
     """
     Converts a string representing a key in Hebrew numerals into a float for key ordering.
@@ -95,7 +92,7 @@ def hebrew_keys_to_numeric_keys(hebrew_keys):
         decimal_part = hebrew_to_integer(parts[1])
 
         # Construct the floating point number
-        numeric_key = integer_part + (decimal_part / 10000)
+        numeric_key = round(integer_part + (decimal_part / 10000), 4)
 
         return numeric_key
 
@@ -200,7 +197,7 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.0.1"
+    version_number = "1.0.2"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -239,6 +236,12 @@ if __name__ == "__main__":
     formatted_merged_df[key_col] = formatted_merged_df[key_col].apply(
         lambda cell: format_print_marks_over_one_thousand(cell) if isinstance(cell,
                                                                               str) and '-' in cell and ':' in cell else cell)
+    # rename the column "Jerusalem 1987_table_0_df_Jerusalem Benayahu O 204_table_0.csv" to "Benayahu O 204"
+    formatted_merged_df = formatted_merged_df.rename(
+        columns={"Jerusalem 1987_table_0_df_Jerusalem Benayahu O 204_table_0.csv": "Benayahu O 204"})
+    # remove ".ץץ" from 'דפוס' column
+    formatted_merged_df[key_col] = formatted_merged_df[key_col].apply(
+        lambda cell: cell.replace(".ץץ", "") if isinstance(cell, str) else cell)
 
     # add new column of numeric keys based on hebrew keys from 'דפוס' column
     formatted_merged_df['numeric_key'] = formatted_merged_df[key_col].apply(
@@ -247,8 +250,12 @@ if __name__ == "__main__":
     # make numeric_key column the first column in the dataframe
     formatted_merged_df = formatted_merged_df[
         ['numeric_key'] + [col for col in formatted_merged_df.columns if col != 'numeric_key']]
-
-    formatted_merged_df.to_csv(Path("outputs") / f"merged_v{str(version)}.csv", index=False)
+    # order the formatted_merged_df by numeric_key column
+    # Replace string values in 'numeric_key' column with numpy.inf
+    formatted_merged_df['numeric_key'] = pd.to_numeric(formatted_merged_df['numeric_key'], errors='coerce').fillna(
+        np.inf)
+    formatted_merged_df = formatted_merged_df.sort_values(by=['numeric_key'])
+    formatted_merged_df.to_csv(Path("outputs") / f"rashba_responsa_index_{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
     output_stats = stats.get_output_stats(len(super_set), len(dfs), str(version))
