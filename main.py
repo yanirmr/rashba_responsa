@@ -190,6 +190,7 @@ def list_to_string(l: list) -> str:
 
     return '; '.join(str(e) for e in l) if l else ''
 
+
 def read_csv_files_into_dict(folder_path: str) -> dict[str, pd.DataFrame]:
     """
     Read all CSV files in a folder into a dictionary of DataFrames.
@@ -234,7 +235,20 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
 def organized_df_cols(formatted_merged_df):
     # llst of columsn pairs to bo concatenated and column target names
     cols_to_concat = [
-        (["Cambridge 499_table_0", """קמברידג' 499 ח"ב"""], "קמברידג' 499")]
+        (["Cambridge 499_table_0", """קמברידג' 499 ח"ב"""], "קמברידג' 499"),
+        (["לונדון 10753", "לונדון 10753 סימן ודף", "לונדון 10753_df_HaBattim vol 2_table_1.csv"], "לונדון 10753 מאוחד"),
+        (["ניו יורק 1383", "ניו יורק 1383_df_HaBattim vol 2_table_0.csv", "ניו יורק 1383 - השלמות",
+          "ניו יורק 1383_df_HaBattim vol 2_table_1.csv", "ניו יורק 1383 - השלמות_df_HaBattim vol 2_table_1.csv",
+          "New York 1383 - Additions_table_0", "פתיחה_df_New York 1383 - Additions_table_0.csv"],
+         "ניו יורק 1383 מאוחד"),
+        (["London BL 571_table_0", "London BL 571_table_1", "London BL 571_table_2"], "לונדון 571 חאוחד"),
+        (["מונטיפיורי 103 סימן ודף", "מונטיפיורי 103 דף"], "מונטיפיורי 103 מאוחד"),
+        (
+            ["Montefiore 102_table_0", "מונטיפיורי 102", "מונטיפיורי 102_df_Vercelli_table_0.csv"],
+            "מונטיפיורי 102 מאוחד"),
+        (["סימן ודף לונדון 573", "פתיחה וחתימה.1_df_Moscow 550_London 573_table_1.csv"], "לונדון 573 מאוחד"),
+
+    ]
 
     # concatenate columns
     for cols, target in cols_to_concat:
@@ -243,33 +257,33 @@ def organized_df_cols(formatted_merged_df):
     formatted_merged_df = formatted_merged_df.rename(
         columns={"Cambridge 498 - part 2_table_0": "קמברידג' 498",
                  "Cambridge 500_table_0": "קמברידג' 500",
+                 "לונדון 573 מאוחד": "לונדון 573",
                  "ניו יורק 1423": "ניו יורק 1423",
                  "אוקספורד 2365 כרך א סימן ודף": "אוקספורד 2365 כרך א",
-                 "ניו יורק 1383": 'ניו יורק 1383 הבתים ח"א',
+                 "ניו יורק 1383 מאוחד": 'ניו יורק 1383',
                  'אוקספורד 2365 כרך ב': 'אוקספורד 2365 כרך ב',
-                 'לונדון 10753': 'לונדון 10753',
+                 'לונדון 10753 מאוחד': 'לונדון 10753',
                  'מוסקבה 549': 'מוסקבה 549',
-                 'ניו יורק 1383_df_HaBattim vol 2_table_0.csv': 'ניו יורק 1383 הבתים ח"ב',
-                 'ניו יורק 1383 - השלמות': 'ניו יורק 1383 הבתים השלמות',
                  'מוסקבה 549_df_HaBattim vol 2_table_1.csv': 'מוסקבה 549 הבתים',
+                 "ירושלים 1987": "ירושלים 1987 - 2",
                  'Jerusalem 1987_table_0': 'ירושלים 1987',
                  'כ"י וושינגטון 157': 'וושינגטון 157',
+                 'אוקספורד סימן ודף': 'אוקספורד 815',
                  'Benayahu O 204': 'בניהו ע 204',
                  'London BL 569_table_0': 'לונדון 569',
                  'כ"י מונטיפיורי 124': 'מונטיפיורי 124',
                  'London BL 570_table_0': 'לונדון 570',
-                 'London BL 571_table_0': 'לונדון 571 ח"א',
-                 'London BL 571_table_1': 'לונדון 571 ח"ב',
-                 'London BL 571_table_2': 'לונדון 571 ח"ג',
+                 'לונדון 571 מאוחד': 'לונדון 571',
                  'כ"י שוקן 2055': 'שוקן 2055',
                  'London BL 572_table_0': 'לונדון 572',
                  'Montefiore 102_table_0': 'מונטיפיורי 102',
                  'כ"י מונטיפיורי 130 סימן ודף': 'מונטיפיורי 130',
                  'כ"י מונטיפיורי 100 דף': 'מונטיפיורי 100',
+                 "מונטיפיורי 103 מאוחד": 'מונטיפיורי 103',
+                 "מונטיפיורי 102 מאוחד": 'מונטיפיורי 102',
                  'Moscow 1378_table_0': 'מוסקבה 1378',
                  'מוסקבה 527 סימן ודף': 'מוסקבה 527',
                  'Moscow 595_table_0': 'מוסקבה 595',
-                 'מונטיפיורי 103 סימן ודף': 'מונטיפיורי 103',
                  'New York 1422_table_0': 'ניו יורק 1422',
                  'New York 1476_table_0': 'ניו יורק 1476',
                  'New York 9689_table_0': 'ניו יורק 9689',
@@ -299,29 +313,38 @@ def organized_df_cols(formatted_merged_df):
                  'Small collections_table_7': 'גניזה ניו יורק 2397.9',
                  'Small collections_table_8': 'גניזה ניו יורק 2626.1-4',
                  'Small collections_table_9': 'גניזה PARIS AIU III B 134 + ניו יורק, JTS ENA 3153.3',
-                 'Vercelli_table_0': "מרדכי וירצ'לי 1"})
+                 'Vercelli_table_0': "מרדכי וירצ'לי 1",
+                 'סימן ודף כ"י מוסקבה': 'מוסקבה 550', })
 
     # delete the col that is name is "Cambridge 498 - part 1_table_0"
     formatted_merged_df = formatted_merged_df.drop(
         columns=["Cambridge 498 - part 1_table_0",
                  "פתיחה",
                  "פתיחה_df_Small collections_table_2.csv",
-                 "פתיחה וחתימה.1"])
+                 "פתיחה וחתימה.1",
+                 "אוקספורד 2365 כרך ב_df_HaBattim vol 2_table_1.csv",
+                 "פתיחה_df_Orhot Haim II_table_0.csv"])
 
+    # Save the 'numeric_key' and 'דפוס' columns
     numeric_key = formatted_merged_df['numeric_key']
-    formatted_merged_df = formatted_merged_df.drop('numeric_key', axis=1)
+    dafus = formatted_merged_df['דפוס']
+
+    # Drop the 'numeric_key' and 'דפוס' columns from the dataframe
+    formatted_merged_df = formatted_merged_df.drop(['numeric_key', 'דפוס'], axis=1)
 
     # Sort the rest of the columns alphabetically
     formatted_merged_df = formatted_merged_df.sort_index(axis=1)
 
-    # Add the 'numeric_key' column back
+    # Add the 'numeric_key' and 'דפוס' columns back at the beginning
+    formatted_merged_df.insert(0, 'דפוס', dafus)
     formatted_merged_df.insert(0, 'numeric_key', numeric_key)
+
     return formatted_merged_df
 
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.0.3"
+    version_number = "1.1.0"
     version = semantic_version.Version(version_number)
 
     # Set input folder
