@@ -6,7 +6,6 @@ import json
 import logging
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import semantic_version
 from reportlab.lib.pagesizes import letter
@@ -232,6 +231,79 @@ def filter_and_merge_dataframes(dfs: dict[str, pd.DataFrame], super_set: set, ke
     return merged_df
 
 
+def format_numeric_key(x: float) -> str:
+    """
+    Formats a number to have 4 decimal places.
+
+    Parameters:
+    x (float): The number to format.
+
+    Returns:
+    str: The number as a string with 4 decimal places,
+         or the original input if it cannot be formatted.
+    """
+    try:
+        return '{:.4f}'.format(x)
+    except ValueError:
+        return x
+
+
+def split_and_keep_first_part(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Splits each cell of the DataFrame on ' //' and keeps only the first part.
+
+    Parameters:
+    df (DataFrame): The DataFrame to process.
+
+    Returns:
+    DataFrame: The processed DataFrame.
+    """
+    df = df.applymap(lambda x: x.split(' //')[0] if isinstance(x, str) else x)
+    return df
+
+
+def remove_specific_strings(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes specific strings from the DataFrame.
+
+    Parameters:
+    df (DataFrame): The DataFrame to process.
+
+    Returns:
+    DataFrame: The DataFrame with the specified strings removed.
+    """
+    df = df.replace(["כי\"נב 540א", "כינ\"ב כה,ל 539ב"], "", regex=True)
+    return df
+
+
+def replace_hyphens(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Replaces hyphens in the DataFrame with an empty string.
+
+    Parameters:
+    df (DataFrame): The DataFrame to process.
+
+    Returns:
+    DataFrame: The DataFrame with hyphens replaced.
+    """
+    df = df.replace(["--", "---"], "", regex=True)
+    return df
+
+
+def remove_rows_with_key_starting_with(df: pd.DataFrame, start_string: str) -> pd.DataFrame:
+    """
+    Removes rows from the DataFrame where the 'דפוס' column starts with a specified string.
+
+    Parameters:
+    df (DataFrame): The DataFrame to process.
+    start_string (str): The string to check for at the start of each 'דפוס' value.
+
+    Returns:
+    DataFrame: The DataFrame with the specified rows removed.
+    """
+    return df[~df['דפוס'].str.startswith(start_string)]
+
+
 def organized_df_cols(formatted_merged_df):
     # llst of columsn pairs to bo concatenated and column target names
     cols_to_concat = [
@@ -241,7 +313,7 @@ def organized_df_cols(formatted_merged_df):
           "ניו יורק 1383_df_HaBattim vol 2_table_1.csv", "ניו יורק 1383 - השלמות_df_HaBattim vol 2_table_1.csv",
           "New York 1383 - Additions_table_0", "פתיחה_df_New York 1383 - Additions_table_0.csv"],
          "ניו יורק 1383 מאוחד"),
-        (["London BL 571_table_0", "London BL 571_table_1", "London BL 571_table_2"], "לונדון 571 חאוחד"),
+        (["London BL 571_table_0", "London BL 571_table_1", "London BL 571_table_2"], "לונדון 571 מאוחד"),
         (["מונטיפיורי 103 סימן ודף", "מונטיפיורי 103 דף"], "מונטיפיורי 103 מאוחד"),
         (
             ["Montefiore 102_table_0", "מונטיפיורי 102", "מונטיפיורי 102_df_Vercelli_table_0.csv"],
@@ -263,13 +335,12 @@ def organized_df_cols(formatted_merged_df):
                  "ניו יורק 1383 מאוחד": 'ניו יורק 1383',
                  'אוקספורד 2365 כרך ב': 'אוקספורד 2365 כרך ב',
                  'לונדון 10753 מאוחד': 'לונדון 10753',
-                 'מוסקבה 549': 'מוסקבה 549',
-                 'מוסקבה 549_df_HaBattim vol 2_table_1.csv': 'מוסקבה 549 הבתים',
+                 'מוסקבה 549': 'מוסקבה 549 הבתים',
                  "ירושלים 1987": "ירושלים 1987 - 2",
                  'Jerusalem 1987_table_0': 'ירושלים 1987',
                  'כ"י וושינגטון 157': 'וושינגטון 157',
                  'אוקספורד סימן ודף': 'אוקספורד 815',
-                 'Benayahu O 204': 'בניהו ע 204',
+                 'Jerusalem 1987_table_0_df_Jerusalem Benayahu O 204_table_0.csv': 'בניהו ע 204',
                  'London BL 569_table_0': 'לונדון 569',
                  'כ"י מונטיפיורי 124': 'מונטיפיורי 124',
                  'London BL 570_table_0': 'לונדון 570',
@@ -306,7 +377,7 @@ def organized_df_cols(formatted_merged_df):
                  'Small collections_table_10': 'גניזה שטרסבורג 4104.7',
                  'Small collections_table_11': "גניזה קמברידג' TS 13J24.26",
                  'Small collections_table_2': 'מינכן 356/14',
-                 'Small collections_table_3': 'וושינגטון 157',
+                 'Small collections_table_3': 'וושינגטון 157 - 2',
                  'Small collections_table_4': 'ירושלים 7817',
                  'Small collections_table_5': 'ירושלים 1800.713',
                  'Small collections_table_6': "גניזה קמברידג' TS AS 91.289 + TS AS 82.238",
@@ -323,10 +394,13 @@ def organized_df_cols(formatted_merged_df):
                  "פתיחה_df_Small collections_table_2.csv",
                  "פתיחה וחתימה.1",
                  "אוקספורד 2365 כרך ב_df_HaBattim vol 2_table_1.csv",
-                 "פתיחה_df_Orhot Haim II_table_0.csv"])
+                 "פתיחה_df_Orhot Haim II_table_0.csv",
+                 "מוסקבה 549_df_HaBattim vol 2_table_1.csv"])
 
     # Save the 'numeric_key' and 'דפוס' columns
     numeric_key = formatted_merged_df['numeric_key']
+    # change numeric_key if not nan to string with 4 digiqts after the dot (add zeros if needed)
+    numeric_key = numeric_key.apply(format_numeric_key)
     dafus = formatted_merged_df['דפוס']
 
     # Drop the 'numeric_key' and 'דפוס' columns from the dataframe
@@ -344,7 +418,7 @@ def organized_df_cols(formatted_merged_df):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.1.0"
+    version_number = "1.2.0"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -394,10 +468,12 @@ if __name__ == "__main__":
 
     formatted_merged_df = organized_df_cols(formatted_merged_df)
 
-    # order the formatted_merged_df by numeric_key column
+    formatted_merged_df = replace_hyphens(formatted_merged_df)
+    formatted_merged_df = split_and_keep_first_part(formatted_merged_df)
+    formatted_merged_df = remove_specific_strings(formatted_merged_df)
+    formatted_merged_df = remove_rows_with_key_starting_with(formatted_merged_df, start_string="ט:")
+
     # Replace string values in 'numeric_key' column with numpy.inf
-    formatted_merged_df['numeric_key'] = pd.to_numeric(formatted_merged_df['numeric_key'], errors='coerce').fillna(
-        np.inf)
     formatted_merged_df = formatted_merged_df.sort_values(by=['numeric_key'])
     formatted_merged_df.to_csv(Path("outputs") / f"rashba_responsa_index_{str(version)}.csv", index=False)
 
