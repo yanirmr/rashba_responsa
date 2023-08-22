@@ -1,6 +1,10 @@
 import pandas as pd
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+
+pdfmetrics.registerFont(TTFont("FreeSans", "FreeSans.ttf"))
 
 
 def create_index_pdf(df, pdf_filename):
@@ -12,7 +16,7 @@ def create_index_pdf(df, pdf_filename):
 
     for index, row in df.iterrows():
         key = row[0]
-        pdf.setFont("Helvetica", 14)
+        pdf.setFont("FreeSans", 14)
         pdf.drawString(x, y, f'{key}:')
         y -= 20  # Move to next line
 
@@ -21,7 +25,7 @@ def create_index_pdf(df, pdf_filename):
             if pd.notnull(row[i]):  # Check if value is not null
                 doc = df.columns[i]
                 value = row[i]
-                pdf.setFont("Helvetica", 12)
+                pdf.setFont("FreeSans", 12)
                 pdf.drawString(x + 10, y, f'{doc}: {value}')  # Indent doc details
                 y -= 20  # Move to next line
         y -= 10  # Add extra space between keys
@@ -34,8 +38,10 @@ def create_index_pdf(df, pdf_filename):
     pdf.save()
 
 
+
 def main():
     # Input CSV path from user
+    print("HI")
     csv_path = "outputs/rashba_responsa_index_1.2.4.csv"
 
     # Load the CSV into a DataFrame
@@ -48,3 +54,15 @@ def main():
     create_index_pdf(df, pdf_filename)
 
     print(f"Index PDF generated and saved as {pdf_filename}")
+
+    # Generate LaTeX content from the index data
+    latex_output = generate_index_latex(index_data)
+
+    # Save the generated LaTeX content to a .tex file
+    tex_filename = "/mnt/data/index_output.tex"
+    with open(tex_filename, "w", encoding="utf-8") as tex_file:
+        tex_file.write(latex_output)
+
+
+if __name__ == "__main__":
+    main()
