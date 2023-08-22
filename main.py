@@ -318,7 +318,7 @@ def organized_df_cols(formatted_merged_df):
         (
             ["Montefiore 102_table_0", "מונטיפיורי 102", "מונטיפיורי 102_df_Vercelli_table_0.csv"],
             "מונטיפיורי 102 מאוחד"),
-        (["סימן ודף לונדון 573", "פתיחה וחתימה.1_df_Moscow 550_London 573_table_1.csv"], "לונדון 573 מאוחד"),
+        (["סימן ודף לונדון 573"], "לונדון 573 מאוחד"),
 
     ]
 
@@ -331,10 +331,11 @@ def organized_df_cols(formatted_merged_df):
                  "Cambridge 500_table_0": "קמברידג' 500",
                  "לונדון 573 מאוחד": "לונדון 573",
                  "ניו יורק 1423": "ניו יורק 1423",
-                 "אוקספורד 2365 כרך א סימן ודף": "אוקספורד 2365 כרך א",
-                 "ניו יורק 1383 מאוחד": 'ניו יורק 1383',
-                 'אוקספורד 2365 כרך ב': 'אוקספורד 2365 כרך ב',
-                 'לונדון 10753 מאוחד': 'לונדון 10753',
+                 "ניו יורק 1425 / ניו יורק 1433": "ניו יורק 1425",
+                 "אוקספורד 2365 כרך א סימן ודף": "אוקספורד 2365 כרך א הבתים",
+                 "ניו יורק 1383 מאוחד": 'ניו יורק 1383 הבתים',
+                 'אוקספורד 2365 כרך ב': 'אוקספורד 2365 כרך ב הבתים',
+                 'לונדון 10753 מאוחד': 'לונדון 10753 הבתים',
                  'מוסקבה 549': 'מוסקבה 549 הבתים',
                  "ירושלים 1987": "ירושלים 1987 - 2",
                  'Jerusalem 1987_table_0': 'ירושלים 1987',
@@ -406,8 +407,14 @@ def organized_df_cols(formatted_merged_df):
     # Drop the 'numeric_key' and 'דפוס' columns from the dataframe
     formatted_merged_df = formatted_merged_df.drop(['numeric_key', 'דפוס'], axis=1)
 
-    # Sort the rest of the columns alphabetically
-    formatted_merged_df = formatted_merged_df.sort_index(axis=1)
+    gnizah_and_small_collections_columns = sorted(
+        [col for col in formatted_merged_df.columns if 'גניזה' in col] + ['ירושלים 1800.713', 'ירושלים 7817',
+                                                                          'מינכן 356/14'])
+    habatim_columns = sorted([col for col in formatted_merged_df.columns if 'הבתים' in col])
+    other_columns = sorted([col for col in formatted_merged_df.columns if
+                            col not in gnizah_and_small_collections_columns and col not in habatim_columns])
+    new_column_order = other_columns + habatim_columns + gnizah_and_small_collections_columns
+    formatted_merged_df = formatted_merged_df.reindex(columns=new_column_order)
 
     # Add the 'numeric_key' and 'דפוס' columns back at the beginning
     formatted_merged_df.insert(0, 'דפוס', dafus)
@@ -418,7 +425,7 @@ def organized_df_cols(formatted_merged_df):
 
 if __name__ == "__main__":
     # Define the version number
-    version_number = "1.2.0"
+    version_number = "1.2.5"
     version = semantic_version.Version(version_number)
 
     # Set input folder
@@ -433,6 +440,7 @@ if __name__ == "__main__":
     # Initialize KeyHandler
     special_cases_filename = "special_cases.json"
     special_cases = KeyHandler.load_special_cases(special_cases_filename)
+    # TODO BUG: א:א' רמט-א-א:רנ not converted as expected
     key_handler = KeyHandler(special_cases)  # Add special_cases if needed
 
     # Clean and validate keys in each DataFrame and collect into a super set
@@ -474,7 +482,13 @@ if __name__ == "__main__":
     formatted_merged_df = remove_rows_with_key_starting_with(formatted_merged_df, start_string="ט:")
 
     # Replace string values in 'numeric_key' column with numpy.inf
-    formatted_merged_df = formatted_merged_df.sort_values(by=['numeric_key'])
+    formatted_merged_df = formatted_merged_df[
+        pd.to_numeric(formatted_merged_df['numeric_key'], errors='coerce').notna()]
+
+    formatted_merged_df = formatted_merged_df.loc[formatted_merged_df['numeric_key'].astype(float).sort_values().index]
+    # Replace newlines characters from any cell in the DataFrame
+    formatted_merged_df.replace(to_replace=[r"\\t|\\n|\\r", "\t|\n|\r"], value=["", ""], regex=True, inplace=True)
+
     formatted_merged_df.to_csv(Path("outputs") / f"rashba_responsa_index_{str(version)}.csv", index=False)
 
     # Create a dictionary to store the output statistics
